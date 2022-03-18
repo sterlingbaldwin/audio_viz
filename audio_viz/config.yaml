@@ -1,0 +1,54 @@
+host: '192.168.1.110'
+port: 30000
+user: 'sbaldwin'
+pass: 'asdf'
+
+queues:
+  -     
+    color_pallet: 
+      low: [189, 28, 17, 100]
+      high: [158, 216, 232, 100]
+    # NUMBER 1
+    # dark blue, shadowy
+    # single light from stage right
+    # light_values:
+    #   -  
+    #     patch: ___
+    #     values: [15, 50, 138]
+  -     
+    # NUMBER 2
+    # yellow and shadowy
+    # single light from down stage right 
+    # narrow
+    light_values:
+      -  
+        patch: ___
+        values: [227, 191, 61]
+  -     
+    # NUMBER 3
+    # same as number 1
+    light_values:
+      -  
+        patch: ___
+        values: [15, 50, 138]
+  - 
+    # NUMBER 4
+    color_pallet: 
+      low: [45, 20, 112]
+  - 
+    # NUMBER 5
+    # light yellow, sunny stage wash
+    light_values:
+      -  
+        patch: ___
+        values: [222, 232, 107]
+  - 
+    # NUMBER 6
+    # wash of orange, dim
+    light_values:
+      -  
+        patch: ___
+        values: [222, 232, 107]
+    color_pallet: 
+      low: [189, 28, 17]
+      high: [158, 216, 232]
