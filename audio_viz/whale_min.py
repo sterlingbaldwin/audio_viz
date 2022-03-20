@@ -21,6 +21,9 @@ from pprint import pprint
 import threading
 import queue
 
+OFF = [0,0,0,0]
+ON = [100, 100, 100, 100]
+
 
 def add_input(input_queue):
     while True:
@@ -29,10 +32,11 @@ def add_input(input_queue):
 @dataclass
 class Fixture:
     channel: int    # the channel id for the light
-    width: int      # the light width, i.e. RGB on sepperate channels
-    x: int          # the x position of the light
-    y: int          # the y position of the light
+    width: int = 4     # the light width, i.e. RGB on sepperate channels
+    x: int     = 0    # the x position of the light
+    y: int     = 0    # the y position of the light
     val: list[int] = field(default_factory=lambda: [100,100,100,100])
+    has_updated = False
     
     def __str__(self):
         return f"channel: {self.channel}, width: {self.width}, val: {self.val}"
@@ -59,9 +63,7 @@ def print_lights(lights, shape):
             light = lights['house'][i][j]
             if light is not None:
                 cells[i][j] = light.val
-    # pprint(cells)
-    # print('\n'.join([''.join([f'|{item[0]:2},{item[1]:2},{item[2]:2}|' if any(item) else '       ' for item in row]) 
-    #   for row in cells]), flush=True)
+
     print(
         '\n'.join(
             [''.join([f'|{item[0]:2}.{item[1]:2}.{item[2]:2}.{item[3]:2}|' if item else '|           |' for item in row]) 
@@ -97,10 +99,10 @@ lights = {
             Fixture(569, 4, 7, 1), 
             None,                  
             None                   
-        ], [
-            None,                  
+        ], [               
             Fixture(521, 4, 1, 2), 
             Fixture(525, 4, 2, 2), 
+            Fixture(529, 4, 2, 2), 
             Fixture(533, 4, 3, 2), 
             Fixture(537, 4, 4, 2), 
             Fixture(541, 4, 5, 2), 
@@ -173,7 +175,7 @@ lights = {
             None,
             None,
             Fixture(609, 4, 8, 8),
-            Fixture(621, 4, 9, 8),
+            Fixture(629, 4, 9, 8),
         ], [ 
             Fixture(713, 4, 0, 9),
             None,
@@ -185,7 +187,40 @@ lights = {
             None,
             Fixture(613, 4, 8, 9),
             Fixture(633, 4, 9, 9),
-        ],
+        ],[ 
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            Fixture(641, 4, 8, 9),
+            Fixture(637, 4, 9, 9),
+        ],[ 
+            Fixture(673, 4, 8, 9),
+            Fixture(669, 4, 8, 9),
+            Fixture(665, 4, 8, 9),
+            Fixture(661, 4, 8, 9),
+            Fixture(657, 4, 8, 9),
+            Fixture(653, 4, 8, 9),
+            Fixture(649, 4, 8, 9),
+            Fixture(645, 4, 8, 9),
+            None,
+            None,
+        ],[             
+            None,
+            None,
+            Fixture(713, 4, 8, 9),
+            Fixture(709, 4, 8, 9),
+            Fixture(705, 4, 8, 9),
+            Fixture(701, 4, 8, 9),
+            Fixture(697, 4, 8, 9),
+            Fixture(693, 4, 8, 9),
+            Fixture(689, 4, 8, 9),
+            Fixture(685, 4, 8, 9)
+        ]
     ]
 }
 
@@ -197,38 +232,63 @@ class Whale(object):
         self.user = user
         self.password = password
         self.sim = sim
-        self.con = Telnet()
+        self.con = None
+        self.total_sent = 0
         self.message_queue = [] # list of dicts with "channel": "value"
     
+    def init_connection(self):
+        if self.con is not None:
+            self.con.close()
+            del self.con
+        self.total_sent = 0
+        self.con = Telnet()
+        self.con.open(self.host, port=self.port)
+        self.con.write(f"login {self.user} {self.password}\r\n".encode('ascii'))
+
+    
     def flush(self):
+        # print()
         message = ""
         for item in self.message_queue:
             channel, value = item.items()
-            # if isinstance(channel, tuple):
-            #     message += f"dmx {channel[0]} thru {channel[1]} at {value[1]}\r\n"
-            # else:
             message += f"dmx {channel[1]} at {value[1]}\r\n "
         if self.sim:
-            # print(message, flush=True)
             self.message_queue = []
             return
         # print(message.encode('ascii'))
-        self.con.write(message.encode('ascii'))
+        if message and self.con.get_socket():
+            # print(message.encode('ascii'))
+            self.total_sent += len(message)
+            if self.total_sent >= 65000:
+                self.init_connection()
+                self.total_sent = 0
+            self.con.write(message.encode('ascii'))
         self.message_queue = []
-        
+
+
     def __enter__(self):
         if self.sim:
             print("Running in simulation mode")
             return self
-        self.con.open(self.host, port=self.port)
-        print(self.con.read_until(b"login !").decode('ascii'))
-        self.con.write(f"login {self.user} {self.password}\r\n".encode('ascii'))
+        self.init_connection()
+        # self.con.open(self.host, port=self.port)
+        # print(self.con.read_until(b"login !").decode('ascii'))
+        # self.con.write(f"login {self.user} {self.password}\r\n".encode('ascii'))
         print("Whale session initialized")
         return self
 
     def __exit__(self, type, value, traceback):
+        print("RELEASE")
+        self.con.write("Off DMX thru\r\n".encode('ascii'))
+        sleep(0.1)
         self.con.close()
 
+def set_fixture(whale: Whale, fixture: Fixture, target: list[int]):
+    for idx, channel in enumerate(range(fixture.channel, fixture.channel + fixture.width)):
+        whale.message_queue.append({
+            'channel': channel,
+            'value': target[idx]
+        })
 
 def update_fades(whale:Whale, fades:list[Fade], cycle=True):
     to_remove = []
@@ -237,12 +297,13 @@ def update_fades(whale:Whale, fades:list[Fade], cycle=True):
     for fade in fades:
         new_val = fade.current[:]
         for idx, item in enumerate(fade.current):
-
+            # print(f"item[idx]: {item}[{idx}], target: {fade.target[idx]}, step: {fade.step}")
             if item == 0 and item == fade.target[idx] and fade.current != fade.target:
                 continue
 
             if fade.step > 0:# and item < fade.target[idx]:
                 new_val[idx] = item + fade.step
+                # print(f"new_val: {new_val[idx]}")
                 if new_val[idx] >= fade.target[idx]:
                     new_val[idx] = fade.target[idx]
 
@@ -253,8 +314,11 @@ def update_fades(whale:Whale, fades:list[Fade], cycle=True):
                 
             if fade.current[idx] != new_val[idx]:
                 # print(f"[{fade.fixture.x}][{fade.fixture.y}] old val: {fade.current} new val: {new_val} step: {fade.step}")
+                # print(f"updating fixture value from {fade.current[idx]} to {new_val[idx]}")
                 fade.current[idx] = new_val[idx]
                 fade.fixture.val[idx] = new_val[idx]
+                fade.fixture.has_updated = True
+                # print(f"after update {fade.current[idx]}")
                 whale.message_queue.append({
                     'channel': fade.fixture.channel + idx,
                     'value': fade.current[idx]
@@ -264,8 +328,8 @@ def update_fades(whale:Whale, fades:list[Fade], cycle=True):
             #     fade.step = new_step
             if idx == len(fade.current)-1 and fade.current >= fade.target and cycle:
                 # fade.step = -1 * fade.step
-                # fade.step = -100
-                fade.step = -50
+                fade.step = -100
+                # fade.step = -30
 
         # if fade.current == [0, 0, 0, 0]:
         all_zero = True
@@ -291,7 +355,7 @@ def wave(whale:Whale, light_grid:list, shape:tuple, color:list[int], fade_rate:i
     fade_step = max(color)//fade_rate
 
     cell_count = 0
-    small_max = 4
+    small_max = 9
 
     cells[source[0]][source[1]] = True
     source_fixture = light_grid[source[0]][source[1]]
@@ -374,19 +438,24 @@ def get_int(a:int, b:int):
         b = 100
     return randint(min(a,b), max(a,b))
 
-def reset_lights(whale):
+def reset_lights(whale, fixtures):
+    for fix in fixtures:
+        fix.val = OFF[:]
+        set_fixture(whale, fix, OFF)
     fades = []
     print('RESETTING LIGHTS')
     for light_array in lights['house']:
         for light in light_array:
             if light is not None:
-                print(light)
-                fades.append(
-                    Fade(light, [100, 100, 100, 100], [0,0,0,0], -100, [100, 100, 100, 100]))
-    while fades:
-        fades = update_fades(whale, fades, cycle=False)
-        whale.flush()
-        sleep(0.3)
+                # print(light)
+                light.val = OFF[:]
+                set_fixture(whale, light, OFF)
+    #             fades.append(
+    #                 Fade(light, [100, 100, 100, 100], [0,0,0,0], -100, [100, 100, 100, 100]))
+    # while fades:
+    #     fades = update_fades(whale, fades, cycle=False)
+    whale.flush()
+        # sleep(0.3)
     print('RESET COMPLETE')
     # sleep(1)
 
@@ -447,14 +516,22 @@ def main():
     last_wave_time = datetime.now()
 
     wave_threads = []
+    static_fixtures = [
+        Fixture(423),
+        Fixture(415),
+        Fixture(419),
+        Fixture(427)
+    ]
+    wave_speed = 0.1
     static = True
     try:
         with Whale(config['host'], config['port'], user=user, password=password, sim=args.simulate) as whale:
 
-            reset_lights(whale)
+            reset_lights(whale, static_fixtures)
             refresh = timedelta(seconds=1.0/args.refresh)
 
             while True:
+                # whale.sync()
                 now = datetime.now()
 
                 note = False
@@ -466,76 +543,75 @@ def main():
                     print(f"input = {keys}")
                     if keys == 'q':
                         # reset everything
+                        for wt in wave_threads:
+                            wt.join()
                         print("New queue - resetting lights")
-                        reset_lights(whale)
-                        fades = []
-                        for fix in current_queue.get('light_values'):
-                            new_fix = Fixture(fix['patch'], 4, 0, 0, [0,0,0,0])
-                            new_fade = Fade(new_fix, [0,0,0,0], fix['values'], -100, [0,0,0,0])
-                            fades.append(new_fade)
-                            # print(f"Starting fade: {new_fade}")
-                        update_fades(whale, fades, cycle=False)
-                            
+                        reset_lights(whale, static_fixtures)
+                        sleep(0.2)
+
+                        for fix in static_fixtures:
+                            print(f"setting static fixture {fix.channel} to {OFF}")
+                            set_fixture(whale, fix, OFF)
+                        
                         queue_index += 1
     
                         print(f"Staring queue #{queue_index+1}")
-                        current_queue = config['queues'][queue_index]
+                        try:
+                            current_queue = config['queues'][queue_index]
+                        except IndexError:
+                            print("ITS DONE YO")
+                            for thread in wave_threads:
+                                thread.join()
+                            reset_lights(whale, static_fixtures)
+                            for fix in static_fixtures:
+                                print(f"setting static fixture {fix.channel} to {OFF}")
+                                set_fixture(whale, fix, OFF)
+                            whale.flush()
+                            sleep(2)
+                            return 0
+                        print(current_queue)
                         if 'color_pallet' in current_queue.keys():
                             static = False
-                            color_pallet = current_queue.get('color_pallet')
                         else:
                             static = True
                 
-                        static_fixtures = []
-                        fades = []
-                        for fix in current_queue.get('light_values'):
-                            new_fix = Fixture(fix['patch'], 4, 0, 0)
-                            new_fix.val = fix['values']
-                            # print(new_fix)
-                            new_fade = Fade(new_fix, [0,0,0,0], fix['values'], 10, [0,0,0,0])
-                            fades.append(new_fade)
-                            static_fixtures.append(new_fix)
-                            print(f"Starting fade: {new_fade}")
 
-                        while fades:
-                            for fade in fades:
-                                fad.fixture.val
-                                print(fade)
-                            fades = update_fades(whale, fades, cycle=False)
-                            whale.flush()
-                            sleep(0.2)
+                        for fix in current_queue.get('light_values', []):
+                            new_fix = Fixture(fix['patch'], 4, 0, 0)
+                            new_fix.val = fix['values'][:]
+                            static_fixtures.append(new_fix)
+                            print(f"setting static fixture {new_fix.channel} to {new_fix.val}")
+                            set_fixture(whale, new_fix, new_fix.val)
+                        
+                        if queue_index == 5:
+                            for light_array in lights['house']:
+                                for light in light_array:
+                                    if light is not None:
+                                        # print(light)
+                                        light.val = [100, 100, 0, 10][:]
+                                        set_fixture(whale, light, [100, 100, 0, 10])
+                            # for i in range(521, 900, 4):
+                            #     new_fix = Fixture(i, 4, 0, [100, 100, 0, 10])
+                            #     set_fixture(whale, new_fix, new_fix.val)
+
+                        whale.flush()
+                            # print(new_fix)
+                            # new_fade = Fade(new_fix, [0,0,0,0], fix['values'], 10, [0,0,0,0])
+                            # fades.append(new_fade)
+                            # static_fixtures.append(new_fix)
+                            # print(f"Starting fade: {new_fade}")
+
+                        # while fades:
+                        #     for fade in fades:
+                        #         fade.fixture.val
+                        #         print(fade)
+                            
+                        #     fades = update_fades(whale, fades, cycle=False)
+                        #     whale.flush()
+                        #     # sleep(0.2)
+                        #     sleep(1)
                         print("static fades complete")
                     
-                    if keys == 'w' and wave_count < wave_max:
-                        # print("================ STARTING WAVE ==================")
-                        wave_count += 1 
-                        # color = current_queue['color_pallet']['low']
-                        color = [
-                            get_int(current_queue['color_pallet']['low'][0]-20, current_queue['color_pallet']['low'][0]+20),
-                            get_int(current_queue['color_pallet']['low'][1]-20, current_queue['color_pallet']['low'][1]+20),
-                            get_int(current_queue['color_pallet']['low'][2]-20, current_queue['color_pallet']['low'][2]+20),
-                            get_int(current_queue['color_pallet']['low'][3]-20, current_queue['color_pallet']['low'][3]+20),
-                        ]
-                        # source = (0, 0)
-                        # source = (get_int(0, 9), get_int(0, 9))
-                        source = (0, 3) 
-                        wave_args = (
-                            whale,
-                            lights['house'])
-                        kw_args = {
-                            'shape':  light_shape,
-                            'source': source,
-                            'color':  color,
-                            'sim':    args.simulate,
-                            'wave_speed': 0.05
-                        }
-                        new_thread = threading.Thread(
-                                target=wave, 
-                                args=wave_args, 
-                                kwargs=kw_args)
-                        new_thread.start()
-                        wave_threads.append(new_thread)
-                        print("NEW WAVE ADDED")
                 
 
                 note = False
@@ -561,7 +637,7 @@ def main():
                 # if volume > VOL_THRESH and volume - volume_data[volume_idx-1] > EDGE_THRESHOLD:
                 #     note = True
                 window_size = 5
-                if volume > VOL_THRESH and volume > sum(volume_data[volume_idx-window_size:volume_idx])/window_size:
+                if volume > VOL_THRESH and volume - EDGE_THRESHOLD > sum(volume_data[volume_idx-window_size:volume_idx])/window_size:
                     note = True
                     volume = int(volume)
 
@@ -604,16 +680,17 @@ def main():
                     axs[2].plot(freqs_data, 'r')
 
 
-                if not static and note:# and (datetime.now() - last_wave_time) > min_time_since_wave:
+                if not static and note and (datetime.now() - last_wave_time) > min_time_since_wave:
+                    # whale.init_connection()
                     if small:
                         print("------ NEW SMALL ------")
-                        found = False
-                        while not found:
-                            x = get_int(0, 3)
-                            y = get_int(0, 3)
-                            if lights['house'][x][y] is not None:
-                                found = True
-                        source = (x, y)
+                        # found = False
+                        # while not found:
+                        #     x = get_int(1, 8)
+                        #     y = 1
+                        #     if lights['house'][x][y] is not None:
+                        #         found = True
+                        source = (2, 5)
                         color = [100, 100, 100, 100]
                         wave_args = (
                             whale,
@@ -639,20 +716,10 @@ def main():
                             current_queue['color_pallet']['low'][3]
                         ]
                         
-                        color[3] += max(60 - abs(volume), 0)
-                        if color[3] > 100:
-                            color[3] = 100
-                        # print(color)
-                        # print(abs(int(volume)))
-                        # print(50 - abs(int(volume)))
-                        # source = (0, 0)
-                        # old_max = -20
-                        # old_min = -70
-                        # new_max = 0.2
-                        # new_min = 0.05
-                        # old_value = volume
-                        # new_value = ( (old_value - old_min) / (old_max - old_min) ) * (new_max - new_min) + new_min
-                        # speed = new_value
+                        # color[3] += max(60 - abs(volume), 0)
+                        # if color[3] > 100:
+                        #     color[3] = 100
+
                         
                         source = (get_int(0, 3), get_int(0, 3))
                         # source = (0, 3) 
@@ -663,7 +730,7 @@ def main():
                             'shape':  light_shape,
                             'source': source,
                             'color':  color,
-                            'wave_speed': speed
+                            'wave_speed': wave_speed
                         }
                         new_thread = threading.Thread(
                                 target=wave, 
@@ -692,12 +759,14 @@ def main():
                     wave_threads.remove(wt)
                     wave_count -= 1
                 print(f"vol: {volume}")
-                if wave_count:
-                    print(f"speed: {speed}")
+                print(f"total sent: {whale.total_sent}")
+                # if wave_count:
+                #     print(f"speed: {wave_speed}")
                     # sleep((refresh - time_delta).total_seconds())
     except KeyboardInterrupt:
         for thread in wave_threads:
             thread.join()
+        reset_lights(whale, static_fixtures)
                 
 if __name__ == "__main__":
     main()

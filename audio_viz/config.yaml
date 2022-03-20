@@ -12,10 +12,25 @@ queues:
     light_values:
       -  
         patch: 423
-        values: [10, 20, 80, 10]
+        values: [10, 20, 80, 20]
       -  
         patch: 415
-        values: [10, 20, 80, 10]
+        values: [10, 20, 80, 20]
+      - 
+        patch: 573
+        values: [10, 20, 80, 20]
+      - 
+        patch: 577
+        values: [10, 20, 80, 20]
+      - 
+        patch: 581
+        values: [10, 20, 80, 20]
+      - 
+        patch: 585
+        values: [10, 20, 80, 20]
+      - 
+        patch: 589
+        values: [10, 20, 80, 20]
   -     
     # NUMBER 2
     # yellow and shadowy
@@ -28,6 +43,21 @@ queues:
       -  
         patch: 415
         values: [100, 100, 0, 10]
+      - 
+        patch: 573
+        values: [100, 100, 0, 10]
+      - 
+        patch: 577
+        values: [100, 100, 0, 10]
+      - 
+        patch: 581
+        values: [100, 100, 0, 10]
+      - 
+        patch: 585
+        values: [100, 100, 0, 10]
+      - 
+        patch: 589
+        values: [100, 100, 0, 10]
   -     
     # NUMBER 3
     # same as number 1
@@ -38,12 +68,33 @@ queues:
       -  
         patch: 415
         values: [10, 20, 80, 10]
+      - 
+        patch: 573
+        values: [10, 20, 80, 20]
+      - 
+        patch: 577
+        values: [10, 20, 80, 20]
+      - 
+        patch: 581
+        values: [10, 20, 80, 20]
+      - 
+        patch: 585
+        values: [10, 20, 80, 20]
+      - 
+        patch: 589
+        values: [10, 20, 80, 20]
   - 
     # NUMBER 4
     color_pallet: 
-      low: [33, 22, 80, 20]
+      low: [80, 22, 80, 0]
   - 
     # NUMBER 5
+    light_values:
+      -  
+        patch: 423
+        values: [0, 0, 0, 0]
+  - 
+    # NUMBER 6
     # light yellow, sunny stage wash
     light_values:
       -  
@@ -59,21 +110,21 @@ queues:
         patch: 427
         values: [100, 100, 0, 10]
   - 
-    # NUMBER 6
+    # NUMBER 7
     # wash of orange, dim
     light_values:
       -  
         patch: 423
-        values: [90, 40, 32, 10]
+        values: [90, 50, 22, 0]
       -  
         patch: 415
-        values: [90, 40, 32, 10]
+        values: [90, 50, 22, 0]
       -  
         patch: 419
-        values: [90, 40, 32, 10]
+        values: [90, 50, 22, 0]
       -  
         patch: 427
-        values: [90, 40, 32, 10]
+        values: [90, 50, 22, 0]
     
     color_pallet: 
-      low: [17, 28, 90, 0]
+      low: [70, 28, 30, 0]
