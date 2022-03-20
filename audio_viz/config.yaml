@@ -5,16 +5,17 @@ pass: 'asdf'
 
 queues:
   -     
-    color_pallet: 
-      low: [189, 28, 17, 100]
-      high: [158, 216, 232, 100]
+
     # NUMBER 1
     # dark blue, shadowy
     # single light from stage right
-    # light_values:
-    #   -  
-    #     patch: ___
-    #     values: [15, 50, 138]
+    light_values:
+      -  
+        patch: 423
+        values: [10, 20, 80, 10]
+      -  
+        patch: 415
+        values: [10, 20, 80, 10]
   -     
     # NUMBER 2
     # yellow and shadowy
@@ -22,33 +23,57 @@ queues:
     # narrow
     light_values:
       -  
-        patch: ___
-        values: [227, 191, 61]
+        patch: 423
+        values: [100, 100, 0, 10]
+      -  
+        patch: 415
+        values: [100, 100, 0, 10]
   -     
     # NUMBER 3
     # same as number 1
     light_values:
       -  
-        patch: ___
-        values: [15, 50, 138]
+        patch: 423
+        values: [10, 20, 80, 10]
+      -  
+        patch: 415
+        values: [10, 20, 80, 10]
   - 
     # NUMBER 4
     color_pallet: 
-      low: [45, 20, 112]
+      low: [33, 22, 80, 20]
   - 
     # NUMBER 5
     # light yellow, sunny stage wash
     light_values:
       -  
-        patch: ___
-        values: [222, 232, 107]
+        patch: 423
+        values: [100, 100, 0, 10]
+      -  
+        patch: 415
+        values: [100, 100, 0, 10]
+      -  
+        patch: 419
+        values: [100, 100, 0, 10]
+      -  
+        patch: 427
+        values: [100, 100, 0, 10]
   - 
     # NUMBER 6
     # wash of orange, dim
     light_values:
       -  
-        patch: ___
-        values: [222, 232, 107]
+        patch: 423
+        values: [90, 40, 32, 10]
+      -  
+        patch: 415
+        values: [90, 40, 32, 10]
+      -  
+        patch: 419
+        values: [90, 40, 32, 10]
+      -  
+        patch: 427
+        values: [90, 40, 32, 10]
+    
     color_pallet: 
-      low: [189, 28, 17]
-      high: [158, 216, 232]
+      low: [17, 28, 90, 0]
